@@ -1,7 +1,7 @@
 R3 GUI Layouts
 
 	Author: Carl Sassenrath, Saphirion AG
-	Date: 12-Jan-2013/20:53:11+1:00
+	Date: 26-May-2013
 
 =toc
 
@@ -32,7 +32,7 @@ Layouts are fundamental to the GUI. When you open a new window like the one defi
 
     view [
         text "Example window."
-        button "Close" close
+        button "Close" on-action [ close-window face ]
     ]
 
 Here the f:view function internally calls the f:make-layout function that takes the GUI dialect block and builds a layout object as a result. The layout contains two ~faces~: one of the text style and one of the button style.
@@ -44,12 +44,12 @@ Layouts are often used to divide other layouts with ~sublayouts~:
 	view [
 	    vpanel [
 	        text "Show website"
-	        button "Show" browse http://www.rebol.com
-	    ]
+	        button "Show" on-action [ browse http://www.rebol.com ]
+	    ] options [border-color: black border-size: [1x1 1x1]]
 	    vpanel [
 	        text "Example window."
-	        button "Close" close
-	    ]
+	        button "Close" on-action [ close-window face ]
+	    ] options [border-color: black border-size: [1x1 1x1]]
 	]
 
 This window layout contains two sublayouts.
@@ -169,7 +169,7 @@ every row can have individual length
 
 ---Multiple Columns
 
-You can specify the number of columns for a w:hpanel or w:hgroup styles. This is convenient for many layouts, such as input forms that contain multiple labels and input fields. If you don't specify the number, the layout is expected to have just one row.
+You can specify the number of columns for a w:hpanel style. This is convenient for many layouts, such as input forms that contain multiple labels and input fields. If you don't specify the number, the layout is expected to have just one row.
 
 Here's an example two column hpanel:
 
@@ -358,9 +358,9 @@ And, its code is:
 	        ;area
 	    ]
 	    hgroup [
-	        button "Submit" submit http://www.rebol.net/cgi/submit.r
-	        button "Reset"  reset
-	        button "Cancel" close
+	        button "Submit" on-action [ submit http://www.rebol.net/cgi/submit.r ]
+	        button "Reset"  on-action [ reset ]
+	        button "Cancel" on-action [ close-window face ]
 	    ]
 	]
 
