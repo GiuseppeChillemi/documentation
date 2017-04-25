@@ -1,7 +1,8 @@
 R3 GUI Actors
 
-	Author: Carl Sassenrath, Saphirion AG
-	
+	Author: Carl Sassenrath, Saphirion AG, GC
+	Date: 31-May-2013
+
 =toc
 
 ===Concept
@@ -13,7 +14,7 @@ If you think of a style as an object ~class~, its actors are like the ~methods~,
 We call them ~actors~ because they are are not true methods and are similar to the actor functions used in ~schemes~.
 
 \note
-This document is for advanced users who plan to implement their own styles and need to provide new functions for rendering, input, or other control. Casual GUI users do not need to know about actors.
+This document is is for advanced users who plan to implement their own styles and need to provide new functions for rendering, input, or other control. Casual GUI users do not need to know about actors.
 /note
 
 ===Defining Actors
@@ -22,7 +23,7 @@ GUI styles define actors to provide functions that handle events, process input,
 
 Within a style an w:actors block holds the actor definitions. The block is a collection of actor names followed by their function body blocks. No function creators or argument specifications are needed, the f:make-style function will create those.
 
-Note that actor blocks are treated in the same way as the body block of a Funct or Closure construct so that the set-words used in the actor block define variables local to actor (initialized to none). If you need to set the value of a variable that isn't local to the actor, you can either use a set-path or f:set.
+Note that actor blocks are treated in the same way as the body block of a Funct or Closure construct so that all set-words used in the actor block are initialized to none.  If you need to set the value of a variable defined outside the layout, you will need to specify a context for that variable or use 'set for those in the user context.
 
 The naming convention for actors begins with w:on- followed by a verb or verb-noun that best describes the action. Examples are: w:on-draw or w:on-view. Although not strictly required, using this convention helps make GUI code more clear.
 
@@ -167,9 +168,7 @@ When an actor is called, argument values are passed to the actor body block. Loc
 
 ---Inherited Actors
 
-When a style is derived from another style its actors are inherited.
-
-It should be the derived actors are not bound to any particular style, but are simple functions. This allows actors to be efficiently reused in all instances of a face object.
+When a style is derived from another style the derived style inherits the actors of the parent style.
 
 For example, w:button uses the w:clicker actors here:
 
@@ -227,7 +226,7 @@ For example, w:button uses the w:clicker actors here:
 		]
 	]
 
-Notice, no actor definitions from w:clicker are needed to be duplicated.
+Note that three new actors are defined here, and the w:on-draw is redefined. It actually adds further functionality before it then calls the parent style's (clicker) on-draw actor using the do-actor/style function.
 
 ---Accessing Facets
 
@@ -255,7 +254,7 @@ when mouse button clicked on face ||
 on-drag |
 when dragging inside a face ||
 on-drag-over |
-when dragging and are over a target face ||
+when dragging and over a target face ||
 on-drop |
 when drag has stopped or when a file is dropped ||
 on-focus |
@@ -376,7 +375,7 @@ The w:on-attach actor is called when this face gets attached *from* another face
 :arg - the face requesting attachment
 :return - none
 
-Here is simple example hwo it works:
+Here is simple example how it works:
 
 	stylize [
 		node: box [
@@ -415,7 +414,7 @@ For easy access the face/targets field contains faces that are attached FROM the
 
 ---on-attached
 
-The w:on-attached is called on every attached face. It is triggered by w:do-face function call sequence on a face that attaches to one or more face targets.
+The w:on-attached is called on every attached face contained in the targets field, and is triggered by a w:do-face function call sequence on a face that contains targets.
 
 
 ---on-click
@@ -423,7 +422,7 @@ The w:on-attached is called on every attached face. It is triggered by w:do-face
 The w:on-click is called each time a mouse button press or release occurs.
 
 :arg - the event object for the mouse click.
-:return - on down, can be none/false(unfocus is called), true(unfocus is not called) or the drag object. On up, none.
+:return - on down, can be none or the drag object. On up, none.
 
 This example prints the button event that occurred:
 
@@ -447,21 +446,24 @@ The w:on-drag actor is called when the drag object is created or when the mouse 
 :arg - drag object (created earlier)
 :return - none
 
-w:on-drag usually comes after w:on-click and ceases to be used when the drag object is destroyed, which happens right after on-drop.
+w:on-drag is usually called when an w:on-click returns a drag object, and ceases to be used when the drag object is destroyed, which happens right after w:on-drop.
 
 Note that when a drag object exists, the w:on-move and w:on-over actors are not called.
 
 Here is an example used by a slider that changes a value constantly during drag, updates its graphics, and calls its attached faces (if any).
 
 	on-drag: [ ; arg: drag
+		; send the event movement data to the face to allow it to update its position
 		do-actor face 'on-offset arg/delta + arg/base
+		; redraw the face to show the new position
 		draw-face face
+		; call any attached faces in this face's targets field
 		do-face face
 	]
 
 ---on-drag-over
 
-The w:on-drag-over actor is called when the mouse is moving over a foreign face (not the target of the drag.)
+The w:on-drag-over actor is called when the mouse is moving over a foreign face ie. a face that did not create the drag object.
 
 :arg - Block of values related to the drag [drag-object offset ???]
 :return - none
@@ -481,7 +483,7 @@ The w:on-drop actor is called when the drag operation is released.
 
 At the end of a drag operation, when one of the mouse buttons is released, the w:on-click action is called with the event, then w:on-drop is called.
 
-After w:on-drop, the drag object is automatically destroyed. The w:on-drop actor is caleld regardless of whether the drag operation was started over this face or a different face.
+After w:on-drop, the drag object is automatically destroyed. The w:on-drop actor is called regardless of whether the drag operation was started over this face or a different face.
 
 The w:on-drop actor is also called if a file is dragged and dropped from the system desktop over the face. This is a special case.
 
@@ -575,7 +577,7 @@ Resizing a single face:
 		set-facet face 'size arg
 	]
 
-Resizing a compound face (of 'panel' layout type):
+Resizing a compound face (of 'hpanel' layout type):
 
 	on-resize: [
 		do-actor/style face 'on-resize arg 'hpanel
@@ -590,9 +592,9 @@ The w:on-scroll actor is called from one face to scroll another face.
 :arg - the face object of the scroller
 :return - true if the attach was successful
 
-When a scroll-bar is moved it will call this function to tell its target face to scroll. This is how a scroll-bar informs the other face that it's time to update. So, this actor must be defined for styles that are scrollable.
+When a scroll-bar is moved it will call this function to tell its attached target face to scroll. This is how a scroll-bar informs the other face that it is time to update. So, this actor must be defined for styles that are scrollable.
 
-When a face is scrolled, this actor can be called directly by the w:scroll reactor or by a prior attachment that occurs when a scrollable face is defined before a scrolling style.
+When a face is scrolled, this actor can be called directly by the w:scroll actor or by a prior attachment that occurs when a scrollable face is defined before a scrolling style.
 
 Do not confuse this with w:on-scroll-event which takes an event to perform.
 
@@ -673,7 +675,7 @@ The w:on-clear actor is called when a face needs to be cleared.
 :arg - none
 :return - none
 
-This actor is called by the w:clear reactor. It is also called when a layout that contains input fields is cleared with the f:clear-layout function.
+This actor is called by the w:clear actor ??. It is also called when a layout that contains input fields is cleared with the f:clear-layout function.
 
 	on-clear: [
 		clear face/facets/text-edit
@@ -687,7 +689,7 @@ The w:on-reset actor is called when the face needs to be reset to a predefined i
 :arg - none
 :return - none
 
-This actor is mainly used for the w:reset reactor.
+This actor is mainly used for the w:reset ?? actor.
 
 	on-reset: [
 		do-actor face 'on-set 0
@@ -702,7 +704,7 @@ The w:on-draw actor allows you modify a draw block immediately before it is rend
 :arg - the current draw block for the face
 :return - the modified draw block
 
-This function may be called often, every time a f:draw-face is needed. You should make this actor as efficient as possible. If it is possible for computations can be performed in other actors, such as w:on-click, that should be done.
+This function may be called often, every time a f:draw-face is needed. You should make this actor as efficient as possible by moving any time consuming computations to another actor such as w:on-click.
 
 Here is an example of the w:on-draw used by buttons (from the clicker style):
 
